@@ -1,53 +1,81 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebaseClient";
+import { auth, db } from "../firebaseClient";
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { collection, getDocs, addDoc, doc, deleteDoc} from "firebase/firestore";
 import "./Dashboard.css";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
-  const [checking, setChecking] = useState(true);
+  const [friends, setFriends] = useState([]);
+  const [newFriend, setNewFriend] = useState("");
   const navigate = useNavigate();
 
+  // check auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        navigate("/");
-      } else {
-        setUser(u);
-      }
-      setChecking(false);
+      if (!u) navigate("/");
+      else setUser(u);
     });
     return () => unsub();
   }, [navigate]);
 
-  if (checking) {
-    return (
-      <div className="dash-screen">
-        <div className="topbar">
-          <div className="brand">Hisaab <span>Kitaab</span></div>
-          <div className="pulse-dot" />
-        </div>
-        <div className="card skeleton">
-          <div className="skeleton-avatar" />
-          <div className="skeleton-line" />
-          <div className="skeleton-line short" />
-        </div>
-      </div>
+  // load friends
+  const loadFriends = async () => {
+    if (!user) return;
+    const snap = await getDocs(collection(db, "users", user.uid, "friends"));
+    setFriends(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  };
+
+  useEffect(() => {
+    if (user) loadFriends();
+  }, [user]);
+
+  // add friend
+  const handleAddFriend = async (e) => {
+    e.preventDefault();
+    if (!newFriend.trim()) return;
+    await addDoc(collection(db, "users", user.uid, "friends"), {
+      name: newFriend.trim(),
+      balance: 0,
+    });
+    setNewFriend("");
+    await loadFriends();
+  };
+
+  const handleDeleteFriend = async (friendId) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this friend and all their transactions?"
+      )
+    )
+      return;
+
+    // delete all transactions first
+    const txns = await getDocs(
+      collection(db, "users", user.uid, "friends", friendId, "transactions")
     );
-  }
+    for (let t of txns.docs) {
+      await deleteDoc(
+        doc(db, "users", user.uid, "friends", friendId, "transactions", t.id)
+      );
+    }
+
+    // delete the friend doc
+    await deleteDoc(doc(db, "users", user.uid, "friends", friendId));
+
+    loadFriends(); // refresh
+  };
+
+  if (!user) return null;
 
   return (
     <div className="dash-screen">
       <div className="topbar">
-        <div className="brand">Hisaab <span>Kitaab</span></div>
-        <button
-          className="ghost-btn"
-          onClick={async () => {
-            await signOut(auth);
-            navigate("/");
-          }}
-        >
+        <div className="brand">
+          Hisaab <span>Kitaab</span>
+        </div>
+        <button className="ghost-btn" onClick={() => signOut(auth)}>
           Sign out
         </button>
       </div>
@@ -62,30 +90,61 @@ export default function Dashboard() {
             </div>
           )}
           <div className="who">
-            <h1>Welcome, <span className="accent">{user?.displayName || user?.email}</span></h1>
+            <h1>
+              Welcome,{" "}
+              <span className="accent">{user?.displayName || user?.email}</span>
+            </h1>
             {user?.email && <p className="muted">{user.email}</p>}
           </div>
         </div>
 
-        {/* Pretty placeholders for what's coming next */}
-        <div className="grid">
-          <div className="stat">
-            <div className="stat-label">This Month</div>
-            <div className="stat-value">—</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Total Entries</div>
-            <div className="stat-value">—</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Savings</div>
-            <div className="stat-value">—</div>
-          </div>
-        </div>
+        {/* Add Friend form */}
+        <form onSubmit={handleAddFriend} className="friend-form">
+          <input
+            type="text"
+            placeholder="Add a new friend..."
+            value={newFriend}
+            onChange={(e) => setNewFriend(e.target.value)}
+          />
+          <button type="submit" className="primary-btn">
+            Add
+          </button>
+        </form>
 
-        <div className="cta-row">
-          <button className="primary-btn" disabled>+ Add Entry (soon)</button>
-          <button className="secondary-btn" disabled>View Reports (soon)</button>
+        {/* Friends list */}
+        <div className="friends-list">
+          {friends.length === 0 && (
+            <p className="muted">No friends yet — add one above.</p>
+          )}
+          {friends.map((f) => (
+            <div
+              key={f.id}
+              className="friend-row"
+              onClick={() => navigate(`/friend/${f.id}`)}
+            >
+              <span className="friend-name">{f.name}</span>
+              <span
+                className={`friend-balance ${
+                  Number(f.balance) >= 0 ? "positive" : "negative"
+                }`}
+              >
+                {Number(f.balance) >= 0
+                  ? `+$${Number(f.balance).toFixed(2)}`
+                  : `-$${Math.abs(Number(f.balance)).toFixed(2)}`}
+              </span>
+
+              {/* stop event bubbling so row click doesn't trigger */}
+              <button
+                className="delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteFriend(f.id);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
         </div>
       </div>
 

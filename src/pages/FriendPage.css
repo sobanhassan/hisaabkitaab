@@ -1,0 +1,144 @@
+.friend-screen {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.topbar {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  color: #fff;
+}
+
+.brand {
+  font-weight: 800;
+  font-size: 20px;
+}
+.brand span {
+  color: #fde047;
+}
+
+.card {
+  width: 100%;
+  max-width: 800px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+}
+
+.friend-name {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: #f8fafc;
+}
+
+.balance {
+  font-size: 22px;
+  margin-bottom: 20px;
+}
+.balance.positive {
+  color: #4ade80; /* green */
+}
+.balance.negative {
+  color: #f87171; /* red */
+}
+
+.txn-form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.txn-form input,
+.txn-form select {
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  flex: 1;
+}
+.txn-form button {
+  padding: 10px 20px;
+}
+
+.txn-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.txn-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 10px;
+}
+
+.txn-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.txn-desc {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.txn-date {
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.txn-row span {
+  font-size: 16px;
+  font-weight: 600;
+}
+.txn-row .positive {
+  color: #4ade80;
+}
+.txn-row .negative {
+  color: #f87171;
+}
+
+.ghost-btn {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 6px 12px;
+  background: transparent;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+}
+.ghost-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.primary-btn {
+  background: #fde047;
+  color: #0f172a;
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+.primary-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(253, 224, 71, 0.45);
+}
+
+.footnote {
+  margin-top: auto;
+  padding-top: 20px;
+  font-size: 13px;
+  color: #e5e7eb;
+}
