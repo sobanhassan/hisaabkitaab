@@ -22,7 +22,10 @@ export default function App() {
       <Route path="/add-friend" element={<AddFriend />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/friends" element={<FriendsPage />} />
-      <Route path="/previous-friend/:friendId" element={<PreviousFriendPage />} />
+      <Route
+        path="/previous-friend/:friendId"
+        element={<PreviousFriendPage />}
+      />
     </Routes>
   );
 }

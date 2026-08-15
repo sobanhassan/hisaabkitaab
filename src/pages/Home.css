@@ -7,7 +7,7 @@
   background: linear-gradient(135deg, #2563eb, #7c3aed);
   color: white;
   text-align: center;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
   padding: 20px;
   position: relative;
 }
@@ -47,7 +47,9 @@
   border-radius: 10px;
   color: #1f2937;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .card button:hover {

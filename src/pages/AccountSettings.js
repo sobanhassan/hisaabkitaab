@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseClient";
 import { deleteUser, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { deleteDoc, doc, getDoc, runTransaction, setDoc } from "firebase/firestore";
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  runTransaction,
+  setDoc,
+} from "firebase/firestore";
 import "./Dashboard.css";
 
 const MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024;
@@ -23,7 +29,8 @@ async function callProfilePhotoFunction(user, method, body) {
     body,
   });
   const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || "profile-photo-request-failed");
+  if (!response.ok)
+    throw new Error(result.error || "profile-photo-request-failed");
   return result;
 }
 
@@ -47,7 +54,9 @@ export default function AccountSettings() {
       const profile = await getDoc(doc(db, "users", signedInUser.uid));
       const profileData = profile.data() || {};
       const savedCustomPhotoURL = profileData.customPhotoURL || null;
-      const savedGooglePhotoURL = profileData.googlePhotoURL || (savedCustomPhotoURL ? null : signedInUser.photoURL || null);
+      const savedGooglePhotoURL =
+        profileData.googlePhotoURL ||
+        (savedCustomPhotoURL ? null : signedInUser.photoURL || null);
 
       setUsername(profileData.username || "");
       setNewUsername(profileData.username || "");
@@ -56,9 +65,13 @@ export default function AccountSettings() {
       setUser(signedInUser);
 
       if (!profileData.googlePhotoURL && savedGooglePhotoURL) {
-        await setDoc(doc(db, "users", signedInUser.uid), {
-          googlePhotoURL: savedGooglePhotoURL,
-        }, { merge: true });
+        await setDoc(
+          doc(db, "users", signedInUser.uid),
+          {
+            googlePhotoURL: savedGooglePhotoURL,
+          },
+          { merge: true },
+        );
       }
     });
 
@@ -83,18 +96,28 @@ export default function AccountSettings() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const { url: nextCustomPhotoURL } = await callProfilePhotoFunction(user, "POST", formData);
+      const { url: nextCustomPhotoURL } = await callProfilePhotoFunction(
+        user,
+        "POST",
+        formData,
+      );
       await updateProfile(auth.currentUser, { photoURL: nextCustomPhotoURL });
-      await setDoc(doc(db, "users", user.uid), {
-        customPhotoURL: nextCustomPhotoURL,
-        googlePhotoURL: googlePhotoURL || null,
-      }, { merge: true });
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          customPhotoURL: nextCustomPhotoURL,
+          googlePhotoURL: googlePhotoURL || null,
+        },
+        { merge: true },
+      );
       setCustomPhotoURL(nextCustomPhotoURL);
       setMessage("Your profile photo was updated.");
     } catch (error) {
-      setMessage(error.message === "supabase-not-configured"
-        ? "Supabase profile-photo settings are not configured yet."
-        : "We could not upload that profile photo. Please try again.");
+      setMessage(
+        error.message === "supabase-not-configured"
+          ? "Supabase profile-photo settings are not configured yet."
+          : "We could not upload that profile photo. Please try again.",
+      );
     } finally {
       setUploadingPhoto(false);
     }
@@ -106,10 +129,16 @@ export default function AccountSettings() {
     setMessage("");
     try {
       await callProfilePhotoFunction(user, "DELETE");
-      await updateProfile(auth.currentUser, { photoURL: googlePhotoURL || null });
-      await setDoc(doc(db, "users", user.uid), {
-        customPhotoURL: null,
-      }, { merge: true });
+      await updateProfile(auth.currentUser, {
+        photoURL: googlePhotoURL || null,
+      });
+      await setDoc(
+        doc(db, "users", user.uid),
+        {
+          customPhotoURL: null,
+        },
+        { merge: true },
+      );
       setCustomPhotoURL(null);
       setMessage("Your Google profile photo is being used again.");
     } catch {
@@ -129,13 +158,19 @@ export default function AccountSettings() {
     if (nextUsername === username) return;
     try {
       await runTransaction(db, async (transaction) => {
-        const nextUsernameRef = doc(db, "usernames", encodeURIComponent(nextUsername));
+        const nextUsernameRef = doc(
+          db,
+          "usernames",
+          encodeURIComponent(nextUsername),
+        );
         if ((await transaction.get(nextUsernameRef)).exists()) {
           throw new Error("That username is unavailable.");
         }
         transaction.delete(doc(db, "usernames", encodeURIComponent(username)));
         transaction.set(nextUsernameRef, { uid: user.uid });
-        transaction.update(doc(db, "users", user.uid), { username: nextUsername });
+        transaction.update(doc(db, "users", user.uid), {
+          username: nextUsername,
+        });
       });
       setUsername(nextUsername);
       setMessage("Your username was updated.");
@@ -151,7 +186,9 @@ export default function AccountSettings() {
       await deleteUser(auth.currentUser);
       navigate("/", { replace: true });
     } catch {
-      setMessage("For security, you may need to sign in again before deleting your account.");
+      setMessage(
+        "For security, you may need to sign in again before deleting your account.",
+      );
     }
   };
 
@@ -161,30 +198,73 @@ export default function AccountSettings() {
   return (
     <div className="dash-screen">
       <div className="page-card">
-        <button className="ghost-btn" onClick={() => navigate("/dashboard")}>Back to dashboard</button>
+        <button className="ghost-btn" onClick={() => navigate("/dashboard")}>
+          Back to dashboard
+        </button>
         <h1>Account settings</h1>
-        <p><strong>Username:</strong> @{username}</p>
-        <p><strong>Email:</strong> {user.email}</p>
+        <p>
+          <strong>Username:</strong> @{username}
+        </p>
+        <p>
+          <strong>Email:</strong> {user.email}
+        </p>
 
         <section className="settings-form profile-photo-settings">
           <h2>Profile picture</h2>
-          {displayedPhotoURL ? <img className="avatar settings-avatar" src={displayedPhotoURL} alt="Your profile" /> : <div className="avatar fallback settings-avatar">{user.displayName?.[0]?.toUpperCase() || "U"}</div>}
-          <label className="primary-btn upload-photo-button" htmlFor="profile-photo-upload">
+          {displayedPhotoURL ? (
+            <img
+              className="avatar settings-avatar"
+              src={displayedPhotoURL}
+              alt="Your profile"
+            />
+          ) : (
+            <div className="avatar fallback settings-avatar">
+              {user.displayName?.[0]?.toUpperCase() || "U"}
+            </div>
+          )}
+          <label
+            className="primary-btn upload-photo-button"
+            htmlFor="profile-photo-upload"
+          >
             {uploadingPhoto ? "Uploading..." : "Change profile picture"}
           </label>
-          <input id="profile-photo-upload" type="file" accept="image/*" hidden disabled={uploadingPhoto} onChange={uploadProfilePhoto} />
-          <button className="secondary-btn" type="button" disabled={!customPhotoURL || uploadingPhoto} onClick={removeProfilePhoto}>
+          <input
+            id="profile-photo-upload"
+            type="file"
+            accept="image/*"
+            hidden
+            disabled={uploadingPhoto}
+            onChange={uploadProfilePhoto}
+          />
+          <button
+            className="secondary-btn"
+            type="button"
+            disabled={!customPhotoURL || uploadingPhoto}
+            onClick={removeProfilePhoto}
+          >
             Remove profile picture
           </button>
-          <p className="muted">If you remove a custom photo, your Google profile photo will be used.</p>
+          <p className="muted">
+            If you remove a custom photo, your Google profile photo will be
+            used.
+          </p>
         </section>
 
         <form className="settings-form" onSubmit={saveUsername}>
           <label htmlFor="username">Username</label>
-          <input id="username" minLength="4" value={newUsername} onChange={(event) => setNewUsername(event.target.value)} />
-          <button className="primary-btn" type="submit">Change username</button>
+          <input
+            id="username"
+            minLength="4"
+            value={newUsername}
+            onChange={(event) => setNewUsername(event.target.value)}
+          />
+          <button className="primary-btn" type="submit">
+            Change username
+          </button>
         </form>
-        <button className="delete-btn" onClick={deleteAccount}>Delete account</button>
+        <button className="delete-btn" onClick={deleteAccount}>
+          Delete account
+        </button>
         {message && <p className="page-message">{message}</p>}
       </div>
     </div>

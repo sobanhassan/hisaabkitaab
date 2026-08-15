@@ -2,7 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseClient";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, where, writeBatch } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import "./Dashboard.css";
 
 const lookupKey = (value) => encodeURIComponent(value);
@@ -15,6 +25,8 @@ export default function AddFriend() {
   const [searching, setSearching] = useState(false);
   const [sending, setSending] = useState(false);
   const [requestPending, setRequestPending] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
+  const [archivedAt, setArchivedAt] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,6 +37,61 @@ export default function AddFriend() {
     return unsubscribe;
   }, [navigate]);
 
+  useEffect(() => {
+    if (!user || !result) return undefined;
+
+    return onSnapshot(
+      query(
+        collection(db, "friendRequests"),
+        where("senderId", "==", user.uid),
+      ),
+      (snapshot) => {
+        const matchingRequest = snapshot.docs
+          .map((request) => request.data())
+          .filter((request) => request.recipientId === result.uid)
+          .sort(
+            (first, second) =>
+              (second.respondedAt?.toMillis?.() ||
+                second.createdAt?.toMillis?.() ||
+                0) -
+              (first.respondedAt?.toMillis?.() ||
+                first.createdAt?.toMillis?.() ||
+                0),
+          )[0];
+        setRequestPending(matchingRequest?.status === "pending");
+        const requestTime =
+          matchingRequest?.respondedAt?.toMillis?.() ||
+          matchingRequest?.createdAt?.toMillis?.() ||
+          0;
+        setIsFriend(
+          matchingRequest?.status === "accepted" && requestTime > archivedAt,
+        );
+      },
+    );
+  }, [archivedAt, result, user]);
+
+  useEffect(() => {
+    if (!user || !result) return undefined;
+
+    const archivedFriendRef = doc(
+      db,
+      "users",
+      user.uid,
+      "previousFriends",
+      result.uid,
+    );
+    const unsubscribeArchivedFriend = onSnapshot(
+      archivedFriendRef,
+      (snapshot) => {
+        setArchivedAt(snapshot.data()?.endedAt?.toMillis?.() || 0);
+      },
+    );
+
+    return () => {
+      unsubscribeArchivedFriend();
+    };
+  }, [result, user]);
+
   const searchForUser = async (event) => {
     event.preventDefault();
     const term = searchTerm.trim();
@@ -34,6 +101,8 @@ export default function AddFriend() {
     setResult(null);
     setMessage("");
     setRequestPending(false);
+    setIsFriend(false);
+    setArchivedAt(0);
 
     try {
       let lookup = await getDoc(doc(db, "usernames", lookupKey(term)));
@@ -58,14 +127,24 @@ export default function AddFriend() {
       }
 
       const foundUser = { uid: lookup.data().uid, ...profile.data() };
-      const sentRequests = await getDocs(query(
-        collection(db, "friendRequests"),
-        where("senderId", "==", user.uid)
-      ));
-      setRequestPending(sentRequests.docs.some((request) => {
-        const data = request.data();
-        return data.recipientId === foundUser.uid && data.status === "pending";
-      }));
+      const existingFriend = await getDoc(
+        doc(db, "users", user.uid, "friends", foundUser.uid),
+      );
+      setIsFriend(existingFriend.exists());
+      const sentRequests = await getDocs(
+        query(
+          collection(db, "friendRequests"),
+          where("senderId", "==", user.uid),
+        ),
+      );
+      setRequestPending(
+        sentRequests.docs.some((request) => {
+          const data = request.data();
+          return (
+            data.recipientId === foundUser.uid && data.status === "pending"
+          );
+        }),
+      );
       setResult(foundUser);
     } catch {
       setMessage("We could not complete that search. Please try again.");
@@ -75,7 +154,7 @@ export default function AddFriend() {
   };
 
   const addFriend = async () => {
-    if (!result || !user) return;
+    if (!result || !user || isFriend) return;
     setSending(true);
     setMessage("");
 
@@ -87,7 +166,13 @@ export default function AddFriend() {
         return;
       }
 
-      const previousFriendRef = doc(db, "users", user.uid, "previousFriends", result.uid);
+      const previousFriendRef = doc(
+        db,
+        "users",
+        user.uid,
+        "previousFriends",
+        result.uid,
+      );
       const previousFriend = await getDoc(previousFriendRef);
       const isReconnecting = previousFriend.exists();
       const requestRef = isReconnecting
@@ -115,9 +200,13 @@ export default function AddFriend() {
       });
       await batch.commit();
       setRequestPending(true);
-      setMessage(`Friend request sent to ${result.displayName || result.username || result.email}.`);
+      setMessage(
+        `Friend request sent to ${result.displayName || result.username || result.email}.`,
+      );
     } catch {
-      setMessage("We could not send that request. It may already exist, or you can try again.");
+      setMessage(
+        "We could not send that request. It may already exist, or you can try again.",
+      );
     } finally {
       setSending(false);
     }
@@ -128,7 +217,9 @@ export default function AddFriend() {
   return (
     <div className="dash-screen">
       <div className="page-card">
-        <button className="ghost-btn" onClick={() => navigate("/dashboard")}>Back to dashboard</button>
+        <button className="ghost-btn" onClick={() => navigate("/dashboard")}>
+          Back to dashboard
+        </button>
         <h1>Add friend</h1>
         <p className="muted">Search by an exact username or email address.</p>
 
@@ -147,12 +238,24 @@ export default function AddFriend() {
         {result && (
           <div className="search-result">
             <div>
-              <strong>{result.displayName || result.username || result.email}</strong>
+              <strong>
+                {result.displayName || result.username || result.email}
+              </strong>
               {result.username && <span>@{result.username}</span>}
               {result.email && <span>{result.email}</span>}
             </div>
-            <button className="primary-btn" onClick={addFriend} disabled={sending || requestPending}>
-              {sending ? "Sending..." : requestPending ? "Friend request sent" : "Send friend request"}
+            <button
+              className="primary-btn"
+              onClick={addFriend}
+              disabled={sending || requestPending || isFriend}
+            >
+              {sending
+                ? "Sending..."
+                : isFriend
+                  ? "Friends"
+                  : requestPending
+                    ? "Friend request sent"
+                    : "Send friend request"}
             </button>
           </div>
         )}

@@ -1,6 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseClient";
-import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+} from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect } from "react";
 import "./Home.css"; // custom styles

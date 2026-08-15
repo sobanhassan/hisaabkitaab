@@ -2,7 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseClient";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, doc, getDoc, getDocs, serverTimestamp, writeBatch } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  onSnapshot,
+  serverTimestamp,
+  writeBatch,
+} from "firebase/firestore";
 import { getPairId, getUserBalance } from "../sharedLedger";
 import "./Dashboard.css";
 
@@ -27,33 +35,66 @@ export default function FriendsPage() {
       getDocs(collection(db, "users", user.uid, "friends")),
       getDocs(collection(db, "users", user.uid, "previousFriends")),
     ]);
-    const savedFriends = active.docs.map((friend) => ({ id: friend.id, ...friend.data() }));
-    const friendsWithCurrentBalances = await Promise.all(savedFriends.map(async (friend) => {
-      let balance = 0;
-      let photoURL = friend.photoURL || null;
-      try {
-        const profile = await getDoc(doc(db, "users", friend.id));
-        const profileData = profile.data() || {};
-        photoURL = profileData.customPhotoURL || profileData.googlePhotoURL || photoURL;
-      } catch {
-        // A missing profile photo should not prevent the friend from being displayed.
-      }
-      try {
-        const pair = await getDoc(doc(db, "sharedPairs", getPairId(user.uid, friend.id)));
-        balance = pair.exists() ? getUserBalance(pair.data(), user.uid) : 0;
-      } catch {
-        // Older friendships can be missing a shared ledger.
-      }
-      return { ...friend, balance, photoURL };
+    const savedFriends = active.docs.map((friend) => ({
+      id: friend.id,
+      ...friend.data(),
     }));
+    const friendsWithCurrentBalances = await Promise.all(
+      savedFriends.map(async (friend) => {
+        let balance = 0;
+        let photoURL = friend.photoURL || null;
+        try {
+          const profile = await getDoc(doc(db, "users", friend.id));
+          const profileData = profile.data() || {};
+          photoURL =
+            profileData.customPhotoURL ||
+            profileData.googlePhotoURL ||
+            photoURL;
+        } catch {
+          // A missing profile photo should not prevent the friend from being displayed.
+        }
+        try {
+          const pair = await getDoc(
+            doc(db, "sharedPairs", getPairId(user.uid, friend.id)),
+          );
+          balance = pair.exists() ? getUserBalance(pair.data(), user.uid) : 0;
+        } catch {
+          // Older friendships can be missing a shared ledger.
+        }
+        return { ...friend, balance, photoURL };
+      }),
+    );
     setFriends(friendsWithCurrentBalances);
-    setPreviousFriends(previous.docs.map((friend) => ({ id: friend.id, ...friend.data() })));
+    setPreviousFriends(
+      previous.docs.map((friend) => ({ id: friend.id, ...friend.data() })),
+    );
   }, [user]);
 
-  useEffect(() => { if (user) loadFriends(); }, [user, loadFriends]);
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const unsubscribeActive = onSnapshot(
+      collection(db, "users", user.uid, "friends"),
+      loadFriends,
+    );
+    const unsubscribePrevious = onSnapshot(
+      collection(db, "users", user.uid, "previousFriends"),
+      loadFriends,
+    );
+
+    return () => {
+      unsubscribeActive();
+      unsubscribePrevious();
+    };
+  }, [user, loadFriends]);
 
   const removeFriend = async (friend) => {
-    if (!window.confirm(`Remove ${friend.name}? Their history will be kept under Previous friends.`)) return;
+    if (
+      !window.confirm(
+        `Remove ${friend.name}? Their history will be kept under Previous friends.`,
+      )
+    )
+      return;
     const batch = writeBatch(db);
     batch.set(doc(db, "users", user.uid, "previousFriends", friend.id), {
       name: friend.name,
@@ -85,7 +126,8 @@ export default function FriendsPage() {
 
   const getFinalBalanceLabel = (friend) => {
     const balance = Number(friend.finalBalance) || 0;
-    if (balance < 0) return `Ended with ${friend.name} owing you $${Math.abs(balance).toFixed(2)}`;
+    if (balance < 0)
+      return `Ended with ${friend.name} owing you $${Math.abs(balance).toFixed(2)}`;
     if (balance > 0) return `Ended with you owing $${balance.toFixed(2)}`;
     return "Ended with a settled balance";
   };
@@ -93,42 +135,82 @@ export default function FriendsPage() {
   return (
     <div className="dash-screen">
       <div className="page-card">
-        <button className="ghost-btn" onClick={() => navigate("/dashboard")}>Back to dashboard</button>
+        <button className="ghost-btn" onClick={() => navigate("/dashboard")}>
+          Back to dashboard
+        </button>
         <h1>Friends</h1>
         <div className="tab-buttons">
-          <button className={tab === "active" ? "active-tab" : ""} onClick={() => setTab("active")}>Active friends</button>
-          <button className={tab === "previous" ? "active-tab" : ""} onClick={() => setTab("previous")}>Previous friends</button>
+          <button
+            className={tab === "active" ? "active-tab" : ""}
+            onClick={() => setTab("active")}
+          >
+            Active friends
+          </button>
+          <button
+            className={tab === "previous" ? "active-tab" : ""}
+            onClick={() => setTab("previous")}
+          >
+            Previous friends
+          </button>
         </div>
 
         {tab === "active" && (
           <div className="requests-list">
-            {friends.length === 0 ? <p className="muted">No active friends yet.</p> : friends.map((friend) => (
-              <div className="request-row friend-list-row" key={friend.id}>
-                <div className="friend-summary">
-                  {friend.photoURL ? (
-                    <img className="friend-avatar" src={friend.photoURL} alt={`${friend.name}'s profile`} />
-                  ) : (
-                    <div className="friend-avatar friend-avatar-fallback">{friend.name?.[0]?.toUpperCase() || "U"}</div>
-                  )}
-                  <div className="friend-summary-details">
-                    <strong>{friend.name}</strong>
-                    <span className="friend-inline-balance">{getBalanceLabel(friend.balance)}</span>
+            {friends.length === 0 ? (
+              <p className="muted">No active friends yet.</p>
+            ) : (
+              friends.map((friend) => (
+                <div className="request-row friend-list-row" key={friend.id}>
+                  <div className="friend-summary">
+                    {friend.photoURL ? (
+                      <img
+                        className="friend-avatar"
+                        src={friend.photoURL}
+                        alt={`${friend.name}'s profile`}
+                      />
+                    ) : (
+                      <div className="friend-avatar friend-avatar-fallback">
+                        {friend.name?.[0]?.toUpperCase() || "U"}
+                      </div>
+                    )}
+                    <div className="friend-summary-details">
+                      <strong>{friend.name}</strong>
+                      <span className="friend-inline-balance">
+                        {getBalanceLabel(friend.balance)}
+                      </span>
+                    </div>
                   </div>
+                  <button
+                    className="delete-btn"
+                    onClick={() => removeFriend(friend)}
+                  >
+                    Remove friend
+                  </button>
                 </div>
-                <button className="delete-btn" onClick={() => removeFriend(friend)}>Remove friend</button>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 
         {tab === "previous" && (
           <div className="requests-list">
-            {previousFriends.length === 0 ? <p className="muted">No previous friends yet.</p> : previousFriends.map((friend) => (
-              <div className="request-row previous-friend" key={friend.id} onClick={() => navigate(`/previous-friend/${friend.id}`)}>
-                <div><strong>{friend.name}</strong><span>{getFinalBalanceLabel(friend)}</span></div>
-                <span>View history</span>
-              </div>
-            ))}
+            {previousFriends.length === 0 ? (
+              <p className="muted">No previous friends yet.</p>
+            ) : (
+              previousFriends.map((friend) => (
+                <div
+                  className="request-row previous-friend"
+                  key={friend.id}
+                  onClick={() => navigate(`/previous-friend/${friend.id}`)}
+                >
+                  <div>
+                    <strong>{friend.name}</strong>
+                    <span>{getFinalBalanceLabel(friend)}</span>
+                  </div>
+                  <span>View history</span>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

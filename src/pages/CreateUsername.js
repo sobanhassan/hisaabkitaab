@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "../firebaseClient";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, getDocFromServer, runTransaction, serverTimestamp } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  getDocFromServer,
+  runTransaction,
+  serverTimestamp,
+} from "firebase/firestore";
 import "./Home.css";
 
 const usernameKey = (username) => encodeURIComponent(username);
@@ -47,12 +53,15 @@ export default function CreateUsername() {
       try {
         const usernameDoc = await Promise.race([
           getDocFromServer(doc(db, "usernames", usernameKey(username))),
-          new Promise((_, reject) => window.setTimeout(
-            () => reject(new Error("Availability check timed out.")),
-            8000
-          )),
+          new Promise((_, reject) =>
+            window.setTimeout(
+              () => reject(new Error("Availability check timed out.")),
+              8000,
+            ),
+          ),
         ]);
-        if (!cancelled) setAvailability(usernameDoc.exists() ? "taken" : "available");
+        if (!cancelled)
+          setAvailability(usernameDoc.exists() ? "taken" : "available");
       } catch {
         if (!cancelled) setAvailability("error");
       }
@@ -72,7 +81,11 @@ export default function CreateUsername() {
     }
 
     if (availability !== "available") {
-      setError(availability === "taken" ? "This username is unavailable. Please choose something else." : "Please wait while we check availability.");
+      setError(
+        availability === "taken"
+          ? "This username is unavailable. Please choose something else."
+          : "Please wait while we check availability.",
+      );
       return;
     }
 
@@ -88,13 +101,17 @@ export default function CreateUsername() {
           throw new Error("That username is already taken.");
         }
 
-        transaction.set(doc(db, "users", user.uid), {
-          username,
-          email: user.email || null,
-          displayName: user.displayName || user.email || null,
-          googlePhotoURL: user.photoURL || null,
-          createdAt: serverTimestamp(),
-        }, { merge: true });
+        transaction.set(
+          doc(db, "users", user.uid),
+          {
+            username,
+            email: user.email || null,
+            displayName: user.displayName || user.email || null,
+            googlePhotoURL: user.photoURL || null,
+            createdAt: serverTimestamp(),
+          },
+          { merge: true },
+        );
         transaction.set(usernameRef, { uid: user.uid });
         if (user.email) {
           transaction.set(doc(db, "emails", usernameKey(user.email)), {
@@ -106,7 +123,10 @@ export default function CreateUsername() {
 
       navigate("/dashboard", { replace: true });
     } catch (saveError) {
-      setError(saveError.message || "We could not save your username. Please try again.");
+      setError(
+        saveError.message ||
+          "We could not save your username. Please try again.",
+      );
     } finally {
       setSaving(false);
     }
@@ -114,41 +134,60 @@ export default function CreateUsername() {
 
   if (!user) return null;
 
-  const displayedError = error || (username.length > 0 && username.length < 4
-    ? "Your username needs at least 4 characters."
-    : availability === "taken"
-      ? "This username is unavailable. Please choose something else."
-      : availability === "error"
-        ? "We could not check availability. Please try again."
-        : "");
+  const displayedError =
+    error ||
+    (username.length > 0 && username.length < 4
+      ? "Your username needs at least 4 characters."
+      : availability === "taken"
+        ? "This username is unavailable. Please choose something else."
+        : availability === "error"
+          ? "We could not check availability. Please try again."
+          : "");
 
   return (
     <div className="home-container">
       <div className="card">
-        <h1>Choose your <span className="highlight">username</span></h1>
+        <h1>
+          Choose your <span className="highlight">username</span>
+        </h1>
         <p>This is how you will appear in Hisaab Kitaab.</p>
         <form onSubmit={saveUsername} className="username-form">
           <div className="username-input-wrap">
             <input
               aria-label="Username"
               aria-describedby="username-requirement username-error"
-            aria-invalid={Boolean(displayedError)}
-            autoComplete="username"
-            autoFocus
-            placeholder="Choose a username"
-            value={username}
-            onChange={(event) => {
-              const nextUsername = event.target.value;
-              setUsername(nextUsername);
-              setAvailability(nextUsername.length >= 4 ? "checking" : "idle");
-              setError("");
-            }}
+              aria-invalid={Boolean(displayedError)}
+              autoComplete="username"
+              autoFocus
+              placeholder="Choose a username"
+              value={username}
+              onChange={(event) => {
+                const nextUsername = event.target.value;
+                setUsername(nextUsername);
+                setAvailability(nextUsername.length >= 4 ? "checking" : "idle");
+                setError("");
+              }}
             />
-            {availability === "available" && <span className="availability-icon" aria-label="Username available">✓</span>}
+            {availability === "available" && (
+              <span
+                className="availability-icon"
+                aria-label="Username available"
+              >
+                ✓
+              </span>
+            )}
           </div>
-          <p id="username-requirement" className="username-requirement">At least 4 characters.</p>
-          {availability === "checking" && <p className="availability-status">Checking availability...</p>}
-          {displayedError && <p id="username-error" className="form-error" role="alert">{displayedError}</p>}
+          <p id="username-requirement" className="username-requirement">
+            At least 4 characters.
+          </p>
+          {availability === "checking" && (
+            <p className="availability-status">Checking availability...</p>
+          )}
+          {displayedError && (
+            <p id="username-error" className="form-error" role="alert">
+              {displayedError}
+            </p>
+          )}
           <button type="submit" disabled={saving}>
             {saving ? "Saving..." : "Continue"}
           </button>
