@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebaseClient";
+import { auth, db } from "../firebaseClient";
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { useEffect } from "react";
 import "./Home.css"; // custom styles
 
@@ -8,16 +9,19 @@ export default function Home() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (u) navigate("/dashboard");
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (!u) return;
+      const profile = await getDoc(doc(db, "users", u.uid));
+      navigate(profile.data()?.username ? "/dashboard" : "/create-username");
     });
     return () => unsub();
   }, [navigate]);
 
   const signIn = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-    navigate("/dashboard");
+    const result = await signInWithPopup(auth, provider);
+    const profile = await getDoc(doc(db, "users", result.user.uid));
+    navigate(profile.data()?.username ? "/dashboard" : "/create-username");
   };
 
   return (

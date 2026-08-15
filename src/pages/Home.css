@@ -55,6 +55,59 @@
   box-shadow: 0 8px 20px rgba(250, 204, 21, 0.6);
 }
 
+.username-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.username-input-wrap {
+  position: relative;
+}
+
+.username-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  padding-right: 42px;
+  font-size: 1rem;
+}
+
+.availability-icon {
+  color: #86efac;
+  font-size: 1.5rem;
+  font-weight: 700;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.username-form .username-requirement,
+.username-form .availability-status {
+  color: #e5e7eb;
+  font-size: 0.9rem;
+  margin: 0;
+  text-align: left;
+}
+
+.username-form .availability-status {
+  color: #bfdbfe;
+}
+
+.username-form button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.username-form .form-error {
+  color: #fecaca;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 footer {
   position: absolute;
   bottom: 20px;
