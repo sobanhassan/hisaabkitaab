@@ -1,70 +1,56 @@
-# Getting Started with Create React App
+# Hisaab Kitaab
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Hisaab Kitaab is a shared-expenses app for keeping track of money between friends. It uses a single shared ledger for each friendship, so both people see the same transactions and balance.
 
-## Available Scripts
+## What it does
 
-In the project directory, you can run:
+- Sign in with Google and choose a unique username.
+- Search for people by username or email and send friend requests.
+- Track shared expenses and see who paid each amount.
+- Request an edit or deletion instead of letting either person change a transaction alone.
+- Request settlement; the other person must approve before the balance is cleared.
+- Keep settled and removed transactions as history.
+- Archive former friendships while preserving their shared history.
+- Use a custom profile picture, with the Google profile picture as the fallback.
+- Use responsive layouts for phone, iPad, and larger screens.
 
-### `npm start`
+## Tech used
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- React
+- Firebase Authentication and Cloud Firestore
+- Supabase Edge Functions and Storage for profile photos
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Run the app locally
 
-### `npm test`
+1. Install dependencies:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+   ```bash
+   npm install
+   ```
 
-### `npm run build`
+2. Add the Firebase configuration in `src/firebaseClient.js` for your Firebase project.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+3. Create a `.env` file with your Supabase project details:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+   ```env
+   REACT_APP_SUPABASE_URL=your_supabase_project_url
+   REACT_APP_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+4. Start the app:
 
-### `npm run eject`
+   ```bash
+   npm start
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The app opens at `http://localhost:3000`.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Supabase profile photos
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The profile-photo Edge Function is in `supabase/functions/profile-photo/index.ts`. Deploy it in the Supabase project used by the app, create a public `profile-photos` bucket, and set the `FIREBASE_PROJECT_ID` secret for the function.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Production build
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```bash
+npm run build
+```
